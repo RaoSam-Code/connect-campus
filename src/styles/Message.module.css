@@ -1,25 +1,35 @@
+/* src/styles/Message.module.css */
+
 .messageItem {
+  display: flex;
+  flex-direction: column;
   margin-bottom: 0.75rem;
 }
 
-.content {
-  display: inline-block;
+.ownItem {
+  align-items: flex-end;
+}
+
+.bubble {
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
-  background-color: #e5e7eb;
+  background-color: #95b9ff;
   max-width: 70%;
 }
 
-.own {
+.ownBubble {
   background-color: #0070f3;
-  color: white;
-  margin-left: auto;
+  color: #f1a1ff;
 }
 
-.timestamp {
-  display: block;
+.sender {
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.time {
   font-size: 0.75rem;
   color: #666;
   margin-top: 0.25rem;
-  margin-left: 0.5rem;
 }

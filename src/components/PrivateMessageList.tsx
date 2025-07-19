@@ -1,31 +1,36 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import MessageItem, { Message } from '@/components/MessageItem'
 import styles from '@/styles/Chat.module.css'
 
-interface PrivateMessage {
-  id: string
-  chat_id: string
-  sender_id: string
-  content: string
-  created_at: string
+interface Props {
+  chatId: string
+  currentUserId: string
 }
 
-export default function PrivateMessageList({ chatId }: { chatId: string }) {
-  const [msgs, setMsgs] = useState<PrivateMessage[]>([])
+export default function PrivateMessageList({
+  chatId,
+  currentUserId,
+}: Props) {
+  const [messages, setMessages] = useState<Message[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // load history
     supabase
       .from('private_messages')
       .select('*')
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true })
-      .then(({ data }) => data && setMsgs(data as PrivateMessage[]))
+      .then(({ data }) => {
+        if (data) setMessages(data as Message[])
+      })
 
+    // realtime
     const channel = supabase
-      .channel('pm_channel')
+      .channel(`pm-${chatId}`)
       .on(
         'postgres_changes',
         {
@@ -35,33 +40,27 @@ export default function PrivateMessageList({ chatId }: { chatId: string }) {
           filter: `chat_id=eq.${chatId}`,
         },
         (payload) => {
-          setMsgs((prev) => [...prev, payload.new as PrivateMessage])
+          setMessages((prev) => [...prev, payload.new as Message])
           bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
         }
       )
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => void supabase.removeChannel(channel)
   }, [chatId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [msgs.length])
+  }, [messages.length])
 
   return (
     <div className={styles.messageList}>
-      {msgs.map((m) => (
-        <div key={m.id} className={styles.messageItem}>
-          <div className={styles.content}>{m.content}</div>
-          <span className={styles.timestamp}>
-            {new Date(m.created_at).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
-        </div>
+      {messages.map((msg) => (
+        <MessageItem
+          key={msg.id}
+          message={msg}
+          currentUserId={currentUserId}
+        />
       ))}
       <div ref={bottomRef} />
     </div>

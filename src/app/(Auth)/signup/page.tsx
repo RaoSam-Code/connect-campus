@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import styles from '@/styles/Auth.module.css'
@@ -13,9 +13,7 @@ export default function SignupPage() {
 
   const handleSignup = async () => {
     setError(null)
-
-    // 1) Sign up the user
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     })
@@ -25,49 +23,36 @@ export default function SignupPage() {
       return
     }
 
-    const userId = signUpData.user?.id
-    if (!userId) {
-      setError('No user ID returned from signup.')
-      return
+    const userId = data.user?.id
+    if (userId) {
+      // Create profile row with default username + public visibility
+      const defaultName = email.split('@')[0]
+      await supabase
+        .from('profiles')
+        .insert({ id: userId, username: defaultName, is_public: true })
+      router.push('/settings')
     }
-
-    // 2) Create their profile row
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: userId,
-        username: email.split('@')[0], // default username
-        is_public: true,               // make them public by default
-      })
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError)
-      // you can still proceed to login, or surface an error
-    }
-
-    // 3) Redirect to login (or chat)  
-    router.push('/login')
   }
 
   return (
     <div className={styles.container}>
       <h2>Sign Up</h2>
       <input
-        className={styles.input}
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        className={styles.input}
       />
       <input
-        className={styles.input}
         type="password"
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        className={styles.input}
       />
-      <button className={styles.button} onClick={handleSignup}>
-        Sign Up
+      <button onClick={handleSignup} className={styles.button}>
+        Create Account
       </button>
       {error && <p className={styles.error}>{error}</p>}
     </div>

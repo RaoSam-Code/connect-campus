@@ -12,24 +12,26 @@
 
 .bubble {
   padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  background-color: #95b9ff;
+  border-radius: 12px;
+  background-color: #e5e7eb;
   max-width: 70%;
+  word-break: break-word;
 }
 
 .ownBubble {
   background-color: #0070f3;
-  color: #f1a1ff;
+  color: #fff;
 }
 
 .sender {
   font-size: 0.75rem;
-  font-weight: bold;
+  font-weight: 600;
   margin-bottom: 0.25rem;
+  color: #333;
 }
 
 .time {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #666;
   margin-top: 0.25rem;
 }

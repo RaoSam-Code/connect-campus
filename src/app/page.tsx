@@ -1,55 +1,70 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import Link from 'next/link'
+import styles from './home.module.css'
+import { supabase } from '@/lib/supabaseClient'
+import {
+  subscribeToTable,
+  unsubscribeChannel,
+} from '@/lib/realtime'
 
 export default function HomePage() {
-  const [loggedIn, setLoggedIn] = useState(false)
+  const [roomsCount, setRoomsCount] = useState(0)
+  const [usersCount, setUsersCount] = useState(0)
 
+  // initial counts
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        setLoggedIn(true)
-      }
-    })
+    supabase
+      .from('rooms')
+      .select('id', { count: 'exact' })
+      .eq('is_public', true)
+      .then(({ count }) => count !== null && setRoomsCount(count))
+
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact' })
+      .eq('is_public', true)
+      .then(({ count }) => count !== null && setUsersCount(count))
+  }, [])
+
+  // realtime updates
+  useEffect(() => {
+    const rIns = subscribeToTable(
+      { table: 'rooms', event: 'INSERT', filter: 'is_public=eq.true' },
+      () => setRoomsCount((c) => c + 1)
+    )
+    const rDel = subscribeToTable(
+      { table: 'rooms', event: 'DELETE', filter: 'is_public=eq.true' },
+      () => setRoomsCount((c) => c - 1)
+    )
+    const uIns = subscribeToTable(
+      { table: 'profiles', event: 'INSERT', filter: 'is_public=eq.true' },
+      () => setUsersCount((u) => u + 1)
+    )
+    const uDel = subscribeToTable(
+      { table: 'profiles', event: 'DELETE', filter: 'is_public=eq.true' },
+      () => setUsersCount((u) => u - 1)
+    )
+
+    return () => {
+      ;[rIns, rDel, uIns, uDel].forEach(unsubscribeChannel)
+    }
   }, [])
 
   return (
-    <>
-      <Navbar />
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Campus Connect</h1>
-        <p>Your hub for chat, study, and collaboration!</p>
-
-        {loggedIn ? (
-          <>
-            <p style={{ marginTop: '1rem' }}>Welcome back! 🎉</p>
-            <Link href="/chat">
-              <button style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#0070f3', color: '#fff', borderRadius: '4px' }}>
-                Go to Chat
-              </button>
-            </Link>
-          </>
-        ) : (
-          <>
-            <p style={{ marginTop: '1rem' }}>Sign up or log in to continue with chat features.</p>
-            <Link href="/login">
-              <button style={{ marginTop: '1rem', marginRight: '1rem', padding: '0.5rem 1rem', background: '#0070f3', color: '#fff', borderRadius: '4px' }}>
-                Log In
-              </button>
-            </Link>
-            <Link href="/signup">
-              <button style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#28a745', color: '#fff', borderRadius: '4px' }}>
-                Sign Up
-              </button>
-            </Link>
-          </>
-        )}
-      </main>
-      <Footer />
-    </>
+    <div className={styles.container}>
+      <h1>Campus Connect</h1>
+      <p>Public rooms: {roomsCount}</p>
+      <p>Public users: {usersCount}</p>
+      <div className={styles.actions}>
+        <Link href="/login" className={styles.button}>
+          Log In
+        </Link>
+        <Link href="/signup" className={styles.buttonOutline}>
+          Sign Up
+        </Link>
+      </div>
+    </div>
   )
 }

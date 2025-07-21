@@ -1,32 +1,25 @@
-// src/components/ProtectedRoute.tsx
 'use client'
 
-import { useEffect, useState, ReactNode } from 'react'
+import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../lib/supabaseClient'
+import { useEffect, useState } from 'react'
 
-interface ProtectedRouteProps {
-  children: ReactNode
-}
-
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
-        // not logged in → redirect
         router.push('/login')
       } else {
-        // user is logged in → show protected content
-        setLoading(false)
+        setAuthorized(true)
       }
     })
   }, [router])
 
-  if (loading) {
-    return <p className="text-center mt-20">Loading...</p>
+  if (!authorized) {
+    return <p className="p-4 text-center">Authenticating…</p>
   }
 
   return <>{children}</>

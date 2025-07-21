@@ -1,9 +1,9 @@
 'use client'
 
-import styles from '@/styles/Auth.module.css'
-import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
+import styles from '@/styles/Auth.module.css'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -12,17 +12,39 @@ export default function LoginPage() {
   const router = useRouter()
 
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setError(error.message)
-    else router.push('/')
+    setError(null)
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (authError) {
+      setError(authError.message)
+    } else {
+      router.push('/chat')
+    }
   }
 
   return (
     <div className={styles.container}>
-      <h2>Login</h2>
-      <input className={styles.input} type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
-      <input className={styles.input} type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
-      <button className={styles.button} onClick={handleLogin}>Login</button>
+      <h2>Log In</h2>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className={styles.input}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className={styles.input}
+      />
+      <button onClick={handleLogin} className={styles.button}>
+        Log In
+      </button>
       {error && <p className={styles.error}>{error}</p>}
     </div>
   )

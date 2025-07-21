@@ -1,127 +1,125 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
 import MessageItem, { Message } from '@/components/MessageItem'
+import { supabase } from '@/lib/supabaseClient'
+import {
+  subscribeToTable,
+  unsubscribeChannel,
+} from '@/lib/realtime'
 import styles from '@/styles/Chat.module.css'
 
 interface Props {
   roomId: string
-  isPrivate?: boolean          // pass true for private chats
+  isPrivate?: boolean
 }
 
 export default function ChatContainer({ roomId, isPrivate }: Props) {
-  const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [currentUserId, setCurrentUserId] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const channelRef = useRef<any>(null)
   const [text, setText] = useState('')
+  const bottomRef = useRef<HTMLDivElement>(null)
 
   const table = isPrivate ? 'private_messages' : 'messages'
   const userField = isPrivate ? 'sender_id' : 'user_id'
+  const roomField = isPrivate ? 'chat_id' : 'room_id'
 
-  // Load session, fetch messages, and subscribe
+  // Load session
   useEffect(() => {
-    // session
     supabase.auth.getSession().then(({ data }) => {
-      const id = data.session?.user.id
-      if (id) setCurrentUserId(id)
+      if (data.session?.user?.id) {
+        setCurrentUserId(data.session.user.id)
+      }
     })
+  }, [])
 
-    // fetch history
-    supabase
-      .from(table)
-      .select('*')
-      .eq(isPrivate ? 'chat_id' : 'room_id', roomId)
-      .order('created_at', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) console.error('Fetch error', error)
-        else setMessages(data as Message[])
-        scrollToBottom()
-      })
+  // Load initial messages
+  useEffect(() => {
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .eq(roomField, roomId)
+        .order('created_at', { ascending: true })
 
-    // realtime
-    setupRealtime()
-
-    // re-subscribe on back-online
-    window.addEventListener('online', setupRealtime)
-    return () => {
-      cleanupRealtime()
-      window.removeEventListener('online', setupRealtime)
+      if (!error) {
+        setMessages((data as Message[]) || [])
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }
     }
+
+    fetchMessages()
   }, [roomId])
 
-  const scrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  // Realtime: on INSERT
+  useEffect(() => {
+    const channel = subscribeToTable<Message>(
+      {
+        table,
+        event: 'INSERT',
+        filter: `${roomField}=eq.${roomId}`,
+      },
+      ({ new: newMsg }) => {
+        if (!newMsg) return
+        setMessages((prev) => [...prev, newMsg as Message])
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }
+    )
 
-  function setupRealtime() {
-    if (!navigator.onLine) return
-    cleanupRealtime()
+    return () => unsubscribeChannel(channel)
+  }, [roomId])
 
-    channelRef.current = supabase
-      .channel(`${table}-${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table,
-          filter: `${isPrivate ? 'chat_id' : 'room_id'}=eq.${roomId}`,
-        },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message])
-          scrollToBottom()
-        }
-      )
-      .subscribe()
-  }
+  // Polling every 2 seconds as backup or fallback
+  useEffect(() => {
+    const interval = setInterval(() => {
+      supabase
+        .from(table)
+        .select('*')
+        .eq(roomField, roomId)
+        .order('created_at', { ascending: true })
+        .then(({ data }) => {
+          if (data) {
+            const latest = data as Message[]
+            const lastPrevId = messages.at(-1)?.id
+            const lastNewId = latest.at(-1)?.id
+            if (lastNewId !== lastPrevId) {
+              setMessages(latest)
+              bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+            }
+          }
+        })
+    }, 2000)
 
-  function cleanupRealtime() {
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
-      channelRef.current = null
-    }
-  }
+    return () => clearInterval(interval)
+  }, [roomId, messages])
 
-  async function handleSend() {
-    const content = text.trim()
-    if (!content || !currentUserId) return
+  // Send message
+  const handleSend = async () => {
+    const body = text.trim()
+    if (!body || !currentUserId) return
 
-    // insert + return row
     const { data: inserted, error } = await supabase
       .from(table)
-      .insert({
-        [isPrivate ? 'chat_id' : 'room_id']: roomId,
-        [userField]: currentUserId,
-        content,
-      })
+      .insert({ [roomField]: roomId, [userField]: currentUserId, content: body })
       .select('*')
       .single()
 
-    if (error) {
-      console.error('Send error', error)
-    } else if (inserted) {
-      // optimistic UI
+    if (!error && inserted) {
       setMessages((prev) => [...prev, inserted as Message])
-      scrollToBottom()
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
+
     setText('')
   }
 
   return (
     <div className={styles.container}>
       <div className={styles.messageList}>
-        {messages.map((msg) => (
-          <MessageItem
-            key={msg.id}
-            message={msg}
-            currentUserId={currentUserId}
-          />
+        {messages.map((m) => (
+          <MessageItem key={m.id} message={m} currentUserId={currentUserId} />
         ))}
         <div ref={bottomRef} />
       </div>
-
       <div className={styles.chatBox}>
         <input
           className={styles.input}

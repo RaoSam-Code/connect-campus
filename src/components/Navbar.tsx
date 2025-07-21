@@ -1,10 +1,10 @@
 'use client'
 
-import styles from '@/styles/Navbar.module.css'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
+import styles from '@/styles/Navbar.module.css'
 
 export default function Navbar() {
   const router = useRouter()
@@ -18,23 +18,28 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.refresh()   // 🔄 Refresh App Router state
-    router.push('/login')  // ⛳ Redirect to login page
+    router.refresh()
+    router.push('/login')
   }
 
   return (
     <nav className={styles.navbar}>
       <Link href="/" className={styles.link}>Home</Link>
+      {loggedIn && (
+        <>
+          <Link href="/chat" className={styles.link}>Chat</Link>
+          <Link href="/users" className={styles.link}>Users</Link>
+          <Link href="/settings" className={styles.link}>Settings</Link>
+          <button className={styles.button} onClick={handleSignOut}>
+            Sign Out
+          </button>
+        </>
+      )}
       {!loggedIn && (
         <>
           <Link href="/login" className={styles.link}>Login</Link>
           <Link href="/signup" className={styles.link}>Signup</Link>
         </>
-      )}
-      {loggedIn && (
-        <button className={styles.button} onClick={handleSignOut}>
-          Sign Out
-        </button>
       )}
     </nav>
   )

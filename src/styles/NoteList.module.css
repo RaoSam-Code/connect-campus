@@ -1,5 +1,0 @@
-.list { list-style: none; padding: 0; }
-.item { margin: 1rem 0; padding: 1rem; border: 1px solid #eee; border-radius: 8px; background: #fff; }
-.title { font-weight: bold; font-size: 1.2rem; }
-.meta { font-size: 0.9rem; color: #888; display: flex; justify-content: space-between; }
-.tags { color: #2563eb; }

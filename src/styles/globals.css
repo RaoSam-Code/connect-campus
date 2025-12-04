@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --font-inter: 'Inter', sans-serif;
+}
+
+body {
+    @apply bg-background text-text-main font-sans antialiased;
+    background-image:
+        radial-gradient(at 0% 0%, rgba(246, 64, 96, 0.03) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(0, 69, 93, 0.03) 0px, transparent 50%);
+    background-attachment: fixed;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+}

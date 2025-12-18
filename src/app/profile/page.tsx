@@ -43,7 +43,7 @@ export default function ProfilePage() {
                     .from('posts')
                     .select(`
                         *,
-                        profiles (
+                        profiles:profiles!posts_user_id_fkey (
                             full_name,
                             avatar_url,
                             university,
@@ -114,7 +114,23 @@ export default function ProfilePage() {
                             {posts.length > 0 ? (
                                 posts.map((post) => (
                                     <div key={post.id} className="break-inside-avoid mb-6">
-                                        <PostCard post={post} />
+                                        <PostCard
+                                            post={{
+                                                id: post.id,
+                                                author: {
+                                                    id: post.user_id,
+                                                    name: post.profiles?.full_name || "Anonymous",
+                                                    avatar: post.profiles?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${post.profiles?.full_name}`,
+                                                    time: new Date(post.created_at).toLocaleDateString(),
+                                                },
+                                                content: post.content,
+                                                image: post.image_url,
+                                                likes: post.likes_count || 0,
+                                                comments: post.comments_count || 0,
+                                                isLiked: false, // TODO: Add like check
+                                                currentUserId: profile?.id
+                                            }}
+                                        />
                                     </div>
                                 ))
                             ) : (

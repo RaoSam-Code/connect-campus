@@ -7,6 +7,7 @@ interface MessageProps {
     isOwn: boolean;
     time: string;
     sender?: string;
+    image?: string;
 }
 
 export default function MessageBubble({ message }: { message: MessageProps }) {
@@ -30,7 +31,24 @@ export default function MessageBubble({ message }: { message: MessageProps }) {
                         : "bg-white/80 backdrop-blur-sm text-text-main rounded-bl-none border border-white/20"
                 )}
             >
-                <p className="text-sm">{message.content}</p>
+                {message.image ? (
+                    <div className="space-y-2">
+                        {message.content && message.content !== "[Image]" && <p className="text-sm">{message.content}</p>}
+                        <img
+                            src={message.image}
+                            alt="Attachment"
+                            className="max-w-full rounded-lg"
+                        />
+                    </div>
+                ) : message.content.startsWith("[IMAGE] ") ? (
+                    <img
+                        src={message.content.replace("[IMAGE] ", "")}
+                        alt="Attachment"
+                        className="max-w-full rounded-lg"
+                    />
+                ) : (
+                    <p className="text-sm">{message.content}</p>
+                )}
             </div>
             <span className="text-[10px] text-text-secondary mt-1 opacity-70">
                 {message.time}

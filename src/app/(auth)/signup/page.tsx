@@ -41,18 +41,8 @@ export default function SignupPage() {
 
             if (signUpError) throw signUpError;
 
-            // Create profile record (triggered by database trigger ideally, but manual here for simplicity if no trigger)
-            // Actually, let's rely on the auth user creation. We might need a trigger or just insert to profiles table.
-            // For this MVP, we'll insert to profiles table manually if needed, or just rely on Auth.
-            // Let's insert into profiles to be safe and consistent with our schema.
-            if (data.user) {
-                const { error: profileError } = await supabase.from('profiles').insert({
-                    id: data.user.id,
-                    email: data.user.email!,
-                    full_name: formData.fullName,
-                });
-                if (profileError) console.error("Profile creation failed:", profileError);
-            }
+            // Profile creation is handled by the database trigger 'on_auth_user_created'
+            // which we set up in supabase_fix_profiles.sql
 
             router.push("/onboarding");
         } catch (err: any) {

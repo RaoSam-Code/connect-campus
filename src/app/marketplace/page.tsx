@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import ListingCard from "@/components/marketplace/ListingCard";
 import GlassCard from "@/components/ui/GlassCard";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/Skeleton";
+import Link from "next/link";
 
 export default function MarketplacePage() {
     const [listings, setListings] = useState<any[]>([]);
@@ -56,6 +57,12 @@ export default function MarketplacePage() {
                     </div>
 
                     <div className="flex gap-4 w-full md:w-auto">
+                        <Link href="/marketplace/create">
+                            <button className="px-4 py-2 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors flex items-center gap-2 shadow-lg shadow-primary/20 h-full">
+                                <Plus size={20} />
+                                <span className="hidden md:inline">Sell Item</span>
+                            </button>
+                        </Link>
                         <GlassCard className="p-2 flex items-center gap-2 flex-1 md:w-80">
                             <Search className="text-text-secondary ml-2" size={20} />
                             <input

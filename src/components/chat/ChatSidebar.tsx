@@ -1,89 +1,105 @@
-"use client";
-
+import { Plus, MessageSquare, Loader2 } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
-import { Search } from "lucide-react";
+import { Room } from "@/hooks/useChat";
 
-const CONVERSATIONS = [
-    {
-        id: 1,
-        name: "CS101 Study Group",
-        lastMessage: "Does anyone have the notes?",
-        time: "2m",
-        unread: 3,
-        avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=CS101",
-        isGroup: true,
-    },
-    {
-        id: 2,
-        name: "Sarah Jenkins",
-        lastMessage: "See you at the library!",
-        time: "1h",
-        unread: 0,
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-        isGroup: false,
-    },
-    {
-        id: 3,
-        name: "Photography Club",
-        lastMessage: "Photo walk this Saturday 📸",
-        time: "3h",
-        unread: 12,
-        avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=Photo",
-        isGroup: true,
-    },
-    {
-        id: 4,
-        name: "Mike Chen",
-        lastMessage: "Thanks for the help!",
-        time: "1d",
-        unread: 0,
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike",
-        isGroup: false,
-    },
-];
+interface ChatSidebarProps {
+    rooms: Room[];
+    selectedRoomId: string | null;
+    onSelectRoom: (roomId: string) => void;
+    onNewChat: () => void;
+    loading: boolean;
+    error?: string | null;
+}
 
-export default function ChatSidebar() {
+export default function ChatSidebar({ rooms, selectedRoomId, onSelectRoom, onNewChat, loading, error }: ChatSidebarProps) {
+
+    // Format time for sidebar (e.g. "10:30 AM" or "Yesterday")
+    const formatTime = (dateString?: string) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (days === 0) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (days === 1) {
+            return "Yesterday";
+        } else {
+            return date.toLocaleDateString();
+        }
+    };
+
     return (
-        <GlassCard className="h-full flex flex-col p-0 border-r border-white/20 rounded-r-none">
-            <div className="p-4 border-b border-white/10">
-                <h2 className="text-xl font-bold text-primary mb-4">Messages</h2>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/50 border border-white/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
-                    />
-                </div>
+        <GlassCard className="h-full flex flex-col p-0 overflow-hidden border-r border-white/10 rounded-none md:rounded-2xl">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h2 className="text-lg font-bold text-text-main">Messages</h2>
+                <button
+                    onClick={onNewChat}
+                    className="p-2 bg-primary/20 text-primary rounded-full hover:bg-primary hover:text-white transition-all"
+                >
+                    <Plus size={20} />
+                </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                {CONVERSATIONS.map((chat) => (
-                    <div
-                        key={chat.id}
-                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/40 cursor-pointer transition-colors group"
-                    >
-                        <div className="relative">
-                            <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
-                                <img src={chat.avatar} alt={chat.name} className="w-full h-full object-cover" />
-                            </div>
-                            {chat.unread > 0 && (
-                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs font-bold flex items-center justify-center rounded-full border-2 border-white">
-                                    {chat.unread}
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                                <h3 className="font-bold text-text-main text-sm truncate">{chat.name}</h3>
-                                <span className="text-xs text-text-secondary">{chat.time}</span>
-                            </div>
-                            <p className="text-xs text-text-secondary truncate group-hover:text-text-main transition-colors">
-                                {chat.lastMessage}
-                            </p>
-                        </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                {loading ? (
+                    <div className="flex justify-center items-center h-40">
+                        <Loader2 className="animate-spin text-primary" size={24} />
                     </div>
-                ))}
+                ) : error ? (
+                    <div className="p-4 text-center text-red-400 bg-red-400/10 rounded-xl m-2">
+                        <p className="text-sm font-medium mb-1">Error loading chats</p>
+                        <p className="text-xs opacity-80">{error}</p>
+                    </div>
+                ) : rooms.length > 0 ? (
+                    rooms.map((room) => (
+                        <button
+                            key={room.id}
+                            onClick={() => onSelectRoom(room.id)}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left group ${selectedRoomId === room.id
+                                ? "bg-primary/20 border border-primary/30"
+                                : "hover:bg-white/5 border border-transparent"
+                                }`}
+                        >
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-surface border border-white/10 flex-shrink-0 relative">
+                                <img
+                                    src={room.image_url || `https://api.dicebear.com/7.x/initials/svg?seed=${room.name || 'Group'}`}
+                                    alt={room.name || "Chat"}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-baseline mb-1">
+                                    <h3 className={`font-semibold truncate ${selectedRoomId === room.id ? "text-primary" : "text-text-main"}`}>
+                                        {room.name || "Group Chat"}
+                                    </h3>
+                                    <span className="text-[10px] text-text-secondary">
+                                        {formatTime(room.last_message?.time || room.updated_at)}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-text-secondary truncate group-hover:text-text-main transition-colors">
+                                    {room.last_message ? (
+                                        <>
+                                            <span className="font-medium text-text-main/80">{room.last_message.sender === "You" ? "You: " : `${room.last_message.sender}: `}</span>
+                                            {room.last_message.content}
+                                        </>
+                                    ) : (
+                                        "No messages yet"
+                                    )}
+                                </p>
+                            </div>
+                        </button>
+                    ))
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-40 text-center p-4">
+                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 text-text-secondary">
+                            <MessageSquare size={24} />
+                        </div>
+                        <p className="text-text-main font-medium">No messages yet</p>
+                        <p className="text-xs text-text-secondary mt-1">Start a conversation with a friend!</p>
+                    </div>
+                )}
             </div>
         </GlassCard>
     );

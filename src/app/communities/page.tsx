@@ -8,14 +8,24 @@ import { Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/Skeleton";
 
+import Link from "next/link";
+import { Plus } from "lucide-react";
+
 export default function CommunitiesPage() {
     const [communities, setCommunities] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [joinedCommunityIds, setJoinedCommunityIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const fetchCommunities = async () => {
             try {
+                const { data: { user } } = await supabase.auth.getUser();
+                setCurrentUser(user);
+
+                // Fetch communities with member count (using the function we created or just raw count if function fails)
+                // For now, let's just fetch communities and we can add a count query later or rely on a view
                 const { data, error } = await supabase
                     .from('communities')
                     .select('*')
@@ -23,6 +33,17 @@ export default function CommunitiesPage() {
 
                 if (error) throw error;
                 setCommunities(data || []);
+
+                if (user) {
+                    const { data: memberships } = await supabase
+                        .from('community_members')
+                        .select('community_id')
+                        .eq('user_id', user.id);
+
+                    if (memberships) {
+                        setJoinedCommunityIds(new Set(memberships.map(m => m.community_id)));
+                    }
+                }
             } catch (error) {
                 console.error("Error fetching communities:", error);
             } finally {
@@ -49,16 +70,24 @@ export default function CommunitiesPage() {
                         <p className="text-text-secondary">Find your tribe and get involved.</p>
                     </div>
 
-                    <GlassCard className="p-2 flex items-center gap-2 w-full md:w-auto min-w-[300px]">
-                        <Search className="text-text-secondary ml-2" size={20} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search clubs, societies..."
-                            className="bg-transparent border-none outline-none text-text-main placeholder-text-muted flex-1 h-10"
-                        />
-                    </GlassCard>
+                    <div className="flex gap-4 w-full md:w-auto">
+                        <Link href="/communities/create">
+                            <button className="px-4 py-2 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors flex items-center gap-2 shadow-lg shadow-primary/20 h-full">
+                                <Plus size={20} />
+                                <span className="hidden md:inline">Create Community</span>
+                            </button>
+                        </Link>
+                        <GlassCard className="p-2 flex items-center gap-2 flex-1 md:w-80">
+                            <Search className="text-text-secondary ml-2" size={20} />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search clubs, societies..."
+                                className="bg-transparent border-none outline-none text-text-main placeholder-text-muted flex-1 h-10"
+                            />
+                        </GlassCard>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -81,7 +110,16 @@ export default function CommunitiesPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredCommunities.map((community) => (
-                            <CommunityCard key={community.id} community={community} />
+                            <CommunityCard
+                                key={community.id}
+                                community={{
+                                    ...community,
+                                    members: 0, // Placeholder until we have real counts
+                                    image: community.image_url,
+                                    isMember: joinedCommunityIds.has(community.id),
+                                    currentUserId: currentUser?.id
+                                }}
+                            />
                         ))}
                     </div>
                 )}

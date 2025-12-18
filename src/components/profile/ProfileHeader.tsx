@@ -3,12 +3,18 @@
 import { motion } from "framer-motion";
 import GlassCard from "@/components/ui/GlassCard";
 import { MapPin, GraduationCap, Calendar, Edit2 } from "lucide-react";
+import { useState } from "react";
+import EditProfileModal from "./EditProfileModal";
+import { useRouter } from "next/navigation";
 
 interface ProfileHeaderProps {
     profile: any;
 }
 
 export default function ProfileHeader({ profile }: ProfileHeaderProps) {
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const router = useRouter();
+
     if (!profile) return null;
 
     return (
@@ -46,7 +52,10 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
                                 <h1 className="text-3xl font-bold text-text-main">{profile.full_name}</h1>
                                 <p className="text-text-secondary">@{profile.email?.split('@')[0]}</p>
                             </div>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-text-main transition-colors border border-white/10 backdrop-blur-md">
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-text-main transition-colors border border-white/10 backdrop-blur-md"
+                            >
                                 <Edit2 size={16} />
                                 <span>Edit Profile</span>
                             </button>
@@ -84,6 +93,13 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
                     </div>
                 </GlassCard>
             </div>
+
+            <EditProfileModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                profile={profile}
+                onUpdate={() => window.location.reload()} // Simple reload to refresh data for now
+            />
         </div>
     );
 }

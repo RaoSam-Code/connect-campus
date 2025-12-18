@@ -10,14 +10,19 @@ import { Skeleton } from "@/components/ui/Skeleton";
 export default function FeedPage() {
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set());
 
     const fetchPosts = async () => {
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUser(user);
+
             const { data, error } = await supabase
                 .from('posts')
                 .select(`
           *,
-          profiles (
+          profiles:profiles!posts_user_id_fkey (
             full_name,
             avatar_url
           )
@@ -26,6 +31,17 @@ export default function FeedPage() {
 
             if (error) throw error;
             setPosts(data || []);
+
+            if (user) {
+                const { data: likes } = await supabase
+                    .from('post_likes')
+                    .select('post_id')
+                    .eq('user_id', user.id);
+
+                if (likes) {
+                    setLikedPostIds(new Set(likes.map(l => l.post_id)));
+                }
+            }
         } catch (error) {
             console.error("Error fetching posts:", error);
         } finally {
@@ -40,7 +56,6 @@ export default function FeedPage() {
         const channel = supabase
             .channel('realtime posts')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
-                // Optimistic update or refetch. For simplicity, let's refetch to get the profile data relation
                 fetchPosts();
             })
             .subscribe();
@@ -86,7 +101,9 @@ export default function FeedPage() {
                             <div key={post.id} className="break-inside-avoid mb-6">
                                 <PostCard
                                     post={{
+                                        id: post.id,
                                         author: {
+                                            id: post.user_id,
                                             name: post.profiles?.full_name || "Anonymous",
                                             avatar: post.profiles?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${post.profiles?.full_name}`,
                                             time: new Date(post.created_at).toLocaleDateString(),
@@ -95,6 +112,8 @@ export default function FeedPage() {
                                         image: post.image_url,
                                         likes: post.likes_count || 0,
                                         comments: post.comments_count || 0,
+                                        isLiked: likedPostIds.has(post.id),
+                                        currentUserId: currentUser?.id
                                     }}
                                 />
                             </div>

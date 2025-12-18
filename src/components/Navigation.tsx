@@ -28,7 +28,11 @@ export default function Navigation() {
     return (
         <>
             {/* Mobile Bottom Navigation */}
-            <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
+            <div className={cn(
+                "fixed bottom-4 left-4 right-4 z-50 md:hidden transition-transform duration-300",
+                // Hide navbar if we are chatting (detected via URL param)
+                pathname === '/chat' && new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').has('id') && "translate-y-32"
+            )}>
                 <div className="flex items-center justify-around bg-surface/80 backdrop-blur-lg border border-white/20 shadow-glass rounded-2xl p-3">
                     {navItems.map((item) => {
                         const isActive = pathname === item.href;

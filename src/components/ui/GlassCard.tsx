@@ -28,7 +28,9 @@ export default function GlassCard({
       `}
             {...props}
         >
-            <div className="relative z-10">{children}</div>
+            <div className={`relative z-10 ${className?.includes('h-full') ? 'h-full' : ''} ${className?.includes('flex') ? 'flex flex-col' : ''}`}>
+                {children}
+            </div>
         </motion.div>
     );
 }

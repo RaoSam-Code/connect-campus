@@ -217,18 +217,19 @@ export function useChat(currentUserId: string | undefined) {
             if (error) throw error;
             if (roomId) {
                 await fetchRooms();
-                setSelectedRoomId(roomId);
+                return roomId;
             }
         } catch (error) {
             console.error("Error creating DM:", error);
         }
+        return null;
     };
 
     // 5. Setup Realtime Subscriptions
     useEffect(() => {
         if (!currentUserId) return;
 
-        // A. Listen for new messages (Global) - to update Room List last_message
+        // A. Listen for ANY messages - to update Room List last_message
         const globalMessagesChannel = supabase
             .channel('global_messages')
             .on('postgres_changes', {
@@ -243,6 +244,7 @@ export function useChat(currentUserId: string | undefined) {
         // B. Listen for messages in Selected Room - to update Chat Window
         let roomChannel: any = null;
         if (selectedRoomId) {
+            console.log("Subscribing to room:", selectedRoomId);
             roomChannel = supabase
                 .channel(`room:${selectedRoomId}`)
                 .on('postgres_changes', {
@@ -251,21 +253,32 @@ export function useChat(currentUserId: string | undefined) {
                     table: 'messages',
                     filter: `room_id=eq.${selectedRoomId}`
                 }, async (payload) => {
-                    // Fetch full message with profile
-                    const { data: newMsg } = await supabase
+                    console.log("New message received:", payload);
+                    // Fetch full message with profile (now fixed by SQL script)
+                    const { data: newMsg, error } = await supabase
                         .from('messages')
                         .select('*, profiles(full_name, avatar_url)')
                         .eq('id', payload.new.id)
                         .single();
 
+                    if (error) {
+                        console.error("Error fetching new message details:", error);
+                        return;
+                    }
+
                     if (newMsg) {
                         setMessages(prev => {
+                            // Prevent duplicates
                             if (prev.some(m => m.id === newMsg.id)) return prev;
-                            return [...prev, newMsg];
+                            const updated = [...prev, newMsg];
+                            // Sort to ensure order (though usually correct)
+                            return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
                         });
                     }
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log(`Room subscription status: ${status}`);
+                });
         }
 
         return () => {
